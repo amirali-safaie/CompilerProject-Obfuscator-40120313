@@ -74,6 +74,11 @@ class MiniCVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by MiniCParser#forInitialization.
+    def visitForInitialization(self, ctx:MiniCParser.ForInitializationContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by MiniCParser#returnStatement.
     def visitReturnStatement(self, ctx:MiniCParser.ReturnStatementContext):
         return self.visitChildren(ctx)
