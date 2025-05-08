@@ -107,6 +107,44 @@ class ObfuscatorVisitor(CodeReconstructionVisitor):
             if not cff_block_content.strip():
                  return f"{{\n{self.get_indent()}}}"
             return f"{{\n{self.get_indent()}// CFF Active - Placeholder\n{cff_block_content}\n{self.get_indent()}}}"
+    def visitAdditiveExpression(self, ctx:MiniCParser.AdditiveExpressionContext):
+        # If not transforming, or not an actual additive/subtractive op, use super
+        if ("transform_expressions" not in self.active_techniques or \
+            not self.active_techniques["transform_expressions"]) or \
+            len(ctx.multiplicativeExpression()) <= 1: # Not a binary op here
+            return super().visitAdditiveExpression(ctx)
+
+        # For simplicity, target the first operation if there are multiple chained (e.g. a + b + c)
+        # A more robust way would be to rebuild the whole expression tree part.
+        # Let's apply to *all* + and - ops in the chain.
+        
+        result = self.visit(ctx.multiplicativeExpression(0))
+        idx = 1
+        while idx < len(ctx.multiplicativeExpression()):
+            op_node = ctx.getChild(idx * 2 -1) # PLUS or MINUS node
+            op_text = op_node.getText()
+            right_operand_text = self.visit(ctx.multiplicativeExpression(idx))
+
+            # Apply transformation:
+            # a + b  => a - (-b)
+            # a - b  => a + (-b)  (less obfuscating, but for variety)
+            # For the example x1 - (-x2) from x1 + x2, it seems it's specifically for +
+            # Let's do a + b  => a - (0 - b) or a - (-b)
+            # And     a - b  => a + (0 - b) or a + (-b)
+
+            if op_text == '+':
+                # Original: a + b. Obfuscated: a - (-(b))
+                # Ensure 'b' is wrapped in parens if it's complex for the negation
+                # Simple way: just wrap what visit returns.
+                result += f" - (0 - ({right_operand_text}))" # a - (-b) is (0-b)
+            elif op_text == '-':
+                # Original: a - b. Obfuscated: a + (-(b))
+                result += f" + (0 - ({right_operand_text}))" # a + (-b)
+            else: # Should not happen for additive
+                result += f" {op_text} {right_operand_text}"
+            idx +=1
+        return result    
+        
 
 
     def generate_new_func_name(self): # This seems unused, function renaming is in visitFunctionDeclaration
