@@ -6,6 +6,7 @@ int sum(int a, int b) {
 int main() {
     int x = 3;
     int y = 4;
+    int z = 5;
     int total = sum(x, y);
     printf("%d\n", total);
     return 0;
