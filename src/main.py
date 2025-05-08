@@ -39,8 +39,8 @@ def main(argv):
         active_techniques = {
             "rename": True,
             "dead_code": True,
-            "flatten_control_flow": False, # Still to do
-            "transform_expressions": True # Enable this
+            "flatten_control_flow": True,  # Enable CFF
+            "transform_expressions": True
         }
         print(f"Applying obfuscation with techniques: {active_techniques}")
 
