@@ -38,9 +38,9 @@ def main(argv):
         # For now, just enable renaming. Later, this could come from CLI args.
         active_techniques = {
             "rename": True,
-            "dead_code": False, # Placeholder
-            "flatten_control_flow": False, # Placeholder
-            "transform_expressions": False # Placeholder
+            "dead_code": True, # Enable this
+            "flatten_control_flow": False,
+            "transform_expressions": False
         }
         print(f"Applying obfuscation with techniques: {active_techniques}")
 
