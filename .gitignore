@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+venv/
+.env
+
+# ANTLR generated files (if not committed, but for simplicity we might commit them)
+# src/minic_parser/*.interp
+# src/minic_parser/*.tokens
+
+# Output files
+output/
+my_obfuscated_test.mc
+
+# IDE specific
+.idea/
+.vscode/
