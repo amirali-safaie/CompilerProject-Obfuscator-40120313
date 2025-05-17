@@ -2,30 +2,46 @@
 
 import sys
 import os
-import argparse # For command-line arguments
-from antlr4 import FileStream, CommonTokenStream, InputStream
+import argparse
+from antlr4 import FileStream, CommonTokenStream # Use FileStream
 from minic_parser.MiniCLexer import MiniCLexer
 from minic_parser.MiniCParser import MiniCParser
-from obfuscator_visitor import ObfuscatorVisitor # Your obfuscator visitor
-# from ast_visitor import CodeReconstructionVisitor # If you want to test reconstruction separately
+from obfuscator_visitor import ObfuscatorVisitor
+
+def ask_yes_no(prompt_message):
+    """Helper function to ask a yes/no question."""
+    while True:
+        choice = input(f"{prompt_message} (y/n): ").lower().strip()
+        if choice in ['y', 'yes']:
+            return True
+        elif choice in ['n', 'no']:
+            return False
+        else:
+            print("Invalid input. Please enter 'y' or 'n'.")
 
 def main_cli():
-    parser = argparse.ArgumentParser(description="Obfuscate Mini-C code.")
+    parser = argparse.ArgumentParser(
+        description="Obfuscate Mini-C code. By default, if no technique flags are specified, you will be prompted interactively.",
+        formatter_class=argparse.RawTextHelpFormatter # For better help text formatting
+    )
     parser.add_argument("input_file", help="Path to the input Mini-C file (.mc)")
-    parser.add_argument("-o", "--output_file", help="Path to save the obfuscated code. Default: output/<input_file_base>_obfuscated.mc")
+    parser.add_argument("-o", "--output_file", 
+                        help="Path to save the obfuscated code. Default: output/<input_file_base>_obfuscated.mc")
     
-    # Technique flags (default to enabled, use --no-<technique> to disable)
-    parser.add_argument("--no-rename", action="store_false", dest="rename", default=True,
-                        help="Disable variable/function renaming (Enabled by default)")
-    parser.add_argument("--no-dead-code", action="store_false", dest="dead_code", default=True,
-                        help="Disable dead code insertion (Enabled by default)")
-    parser.add_argument("--no-flatten", action="store_false", dest="flatten_control_flow", default=True,
-                        help="Disable control flow flattening for 'main' (Enabled by default)")
-    parser.add_argument("--no-expr-transform", action="store_false", dest="transform_expressions", default=True,
-                        help="Disable expression transformation (Enabled by default)")
+    # Technique flags - now they enable the technique if present
+    parser.add_argument("--rename", action="store_true",
+                        help="Enable variable/function renaming.")
+    parser.add_argument("--dead-code", action="store_true",
+                        help="Enable dead code insertion.")
+    parser.add_argument("--flatten", action="store_true", dest="flatten_control_flow", # 'dest' to match dict key
+                        help="Enable control flow flattening for 'main'.")
+    parser.add_argument("--expr-transform", action="store_true", dest="transform_expressions", # 'dest'
+                        help="Enable expression transformation.")
     
-    # Add more options for bonus features if implemented
-    # parser.add_argument("--enable-bonus-feature", action="store_true", help="Enable a bonus feature")
+    parser.add_argument("--all", action="store_true", help="Enable all obfuscation techniques.")
+    parser.add_argument("--interactive", action="store_true", 
+                        help="Force interactive prompt for techniques even if other flags are set (overrides other technique flags).")
+
 
     args = parser.parse_args()
 
@@ -38,73 +54,79 @@ def main_cli():
 
     if not output_filepath:
         base, ext = os.path.splitext(os.path.basename(input_filepath))
-        # Ensure the "output" directory exists
         output_dir = "output"
         os.makedirs(output_dir, exist_ok=True)
         output_filepath = os.path.join(output_dir, f"{base}_obfuscated{ext if ext else '.mc'}")
 
-    # Prepare active techniques dictionary from parsed arguments
     active_techniques = {
-        "rename": args.rename,
-        "dead_code": args.dead_code,
-        "flatten_control_flow": args.flatten_control_flow,
-        "transform_expressions": args.transform_expressions
-        # "bonus_feature": args.enable_bonus_feature # Example for bonus
+        "rename": False,
+        "dead_code": False,
+        "flatten_control_flow": False,
+        "transform_expressions": False
     }
 
-    print(f"Input file: {input_filepath}")
+    # Determine if any specific technique flag was used
+    any_technique_flag_set = args.rename or \
+                             args.dead_code or \
+                             args.flatten_control_flow or \
+                             args.transform_expressions
+
+    if args.interactive:
+        print("\n--- Interactive Obfuscation Technique Selection ---")
+        active_techniques["rename"] = ask_yes_no("Enable Identifier Renaming?")
+        active_techniques["dead_code"] = ask_yes_no("Enable Dead Code Insertion?")
+        active_techniques["flatten_control_flow"] = ask_yes_no("Enable Control Flow Flattening (for main)?")
+        active_techniques["transform_expressions"] = ask_yes_no("Enable Expression Transformation?")
+    elif args.all:
+        print("\n--- Enabling all obfuscation techniques ---")
+        active_techniques = {key: True for key in active_techniques}
+    elif any_technique_flag_set:
+        print("\n--- Using specified command-line techniques ---")
+        active_techniques["rename"] = args.rename
+        active_techniques["dead_code"] = args.dead_code
+        active_techniques["flatten_control_flow"] = args.flatten_control_flow
+        active_techniques["transform_expressions"] = args.transform_expressions
+    else:
+        # No specific technique flags, not --all, not --interactive: Prompt interactively
+        print("\nNo specific techniques selected via command line. Prompting interactively...")
+        print("--- Interactive Obfuscation Technique Selection ---")
+        active_techniques["rename"] = ask_yes_no("Enable Identifier Renaming?")
+        active_techniques["dead_code"] = ask_yes_no("Enable Dead Code Insertion?")
+        active_techniques["flatten_control_flow"] = ask_yes_no("Enable Control Flow Flattening (for main)?")
+        active_techniques["transform_expressions"] = ask_yes_no("Enable Expression Transformation?")
+
+    print(f"\nInput file: {input_filepath}")
     print(f"Output file: {output_filepath}")
     print(f"Active obfuscation techniques: {active_techniques}")
+    print("-" * 40)
+
 
     try:
-        # 1. Read input file
-        # Using InputStream.fromPath for potentially better cross-platform encoding handling with ANTLR
         input_stream = FileStream(input_filepath, encoding='utf-8')
-        # Or use FileStream if preferred:
-        # input_stream = FileStream(input_filepath, encoding='utf-8')
-
-
-        # 2. Lexing
         lexer = MiniCLexer(input_stream)
         stream = CommonTokenStream(lexer)
-
-        # 3. Parsing
         parser = MiniCParser(stream)
-        # Optional: Add a custom error listener for more control over syntax error reporting
-        # from antlr4.error.ErrorListener import ErrorListener
-        # class MyErrorListener(ErrorListener):
-        #     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        #         print(f"Syntax Error at line {line}:{column} - {msg}")
-        #         # You might want to raise an exception here to stop processing
-        # parser.removeErrorListeners() # Remove default console error listener
-        # parser.addErrorListener(MyErrorListener())
-
-        tree = parser.program() # Start parsing from the 'program' rule
+        tree = parser.program()
 
         if parser.getNumberOfSyntaxErrors() > 0:
             print(f"Syntax errors found in {input_filepath}. Obfuscation aborted.")
-            # The default error listener already prints to stderr.
-            # If you added a custom listener, it would handle the output.
             sys.exit(1)
         else:
             print(f"Parsing {input_filepath} successful.")
             
-            # 4. Obfuscation (AST Traversal and Transformation)
             print("Applying obfuscation...")
             obfuscator = ObfuscatorVisitor(active_techniques)
             obfuscated_code = obfuscator.visit(tree)
 
-            # 5. Write output
             print(f"Obfuscated code will be saved to: {output_filepath}")
             with open(output_filepath, "w", encoding='utf-8') as f:
                 f.write(obfuscated_code)
             
             print("-" * 30)
             print("Obfuscation complete.")
-            print("First few lines of obfuscated code:")
-            print("\n".join(obfuscated_code.splitlines()[:15])) # Print a preview
-            print("-" * 30)
-
+            # print("First few lines of obfuscated code:")
+            # print("\n".join(obfuscated_code.splitlines()[:15])) 
+            # print("-" * 30)
 
     except FileNotFoundError:
         print(f"Error: Input file '{input_filepath}' not found.")
