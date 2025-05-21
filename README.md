@@ -8,7 +8,7 @@ The obfuscator parses Mini-C source code, applies several transformation techniq
 
 *   [Amirali Habibi / 40004353]
 *   [Amirali Safaii/ 40120313]
-*   [AmirMohammad Alikhani/ 40120313]
+*   [AmirMohammad Alikhani/ 40121023]
 
 ## Mini-C Language Subset
 
