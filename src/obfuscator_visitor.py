@@ -250,11 +250,14 @@ class ObfuscatorVisitor(CodeReconstructionVisitor):
         return super().visitPrimaryExpression(ctx)
 
     def visitFunctionCall(self, ctx:MiniCParser.FunctionCallContext):
-        orig_name = ctx.IDENTIFIER().getText()
-        if orig_name in ["printf", "scanf"]: self.uses_stdio = True
-        renamed_name = self.global_scope.lookup(orig_name)
-        args = self.visit(ctx.arguments()) if ctx.arguments() else ""
-        return f"{renamed_name}({args})"
+        original_func_name = ctx.IDENTIFIER().getText()
+        
+        if original_func_name in ["printf", "scanf"]: # <<< ENSURE "scanf" IS HERE
+            self.uses_stdio = True
+        
+        renamed_func_name = self.global_scope.lookup(original_func_name)
+        args_str = self.visit(ctx.arguments()) if ctx.arguments() else ""
+        return f"{renamed_func_name}({args_str})"
 
     # visitTypeSpecifier and visitConstant are crucial for setting uses_stdbool
     def visitTypeSpecifier(self, ctx:MiniCParser.TypeSpecifierContext):

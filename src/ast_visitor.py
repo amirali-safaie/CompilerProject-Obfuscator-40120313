@@ -252,13 +252,13 @@ class CodeReconstructionVisitor(MiniCVisitor):
             idx += 1
         return result
 
-    def visitUnaryExpression(self, ctx: MiniCParser.UnaryExpressionContext):
-        if ctx.PLUS():
-            return f"+{self.visit(ctx.unaryExpression())}"
-        if ctx.MINUS():
-            return f"-{self.visit(ctx.unaryExpression())}"
-        if ctx.NOT():
-            return f"!{self.visit(ctx.unaryExpression())}"
+    def visitUnaryExpression(self, ctx:MiniCParser.UnaryExpressionContext):
+        if ctx.PLUS(): return f"+{self.visit(ctx.unaryExpression())}"
+        if ctx.MINUS(): return f"-{self.visit(ctx.unaryExpression())}"
+        if ctx.NOT(): return f"!{self.visit(ctx.unaryExpression())}"
+        if ctx.AMPERSAND(): # <<< ADDED CASE for address-of
+            return f"&{self.visit(ctx.primaryExpression())}" 
+        # The rule was AMPERSAND primaryExpression, so we visit primaryExpression
         return self.visit(ctx.primaryExpression())
 
     def visitPrimaryExpression(self, ctx: MiniCParser.PrimaryExpressionContext):

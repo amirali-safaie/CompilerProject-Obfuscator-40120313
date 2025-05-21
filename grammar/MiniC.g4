@@ -106,6 +106,7 @@ unaryExpression
     : PLUS unaryExpression
     | MINUS unaryExpression
     | NOT unaryExpression
+    | AMPERSAND primaryExpression // <<< ADDED: Address-of operator
     | primaryExpression
     ;
 
@@ -165,6 +166,7 @@ EQ      : '==';
 LTE     : '<=';
 GTE     : '>=';
 NEQ     : '!=';
+AMPERSAND : '&';     // <<< ADDED LEXER RULE FOR '&'
 AND     : '&&';
 OR      : '||';
 NOT     : '!';
